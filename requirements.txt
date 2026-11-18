@@ -1,0 +1,3 @@
+# 本练习只依赖 NumPy；matplotlib 仅用于你自己画图（可选）
+numpy>=1.24
+# matplotlib>=3.7

@@ -1,0 +1,14 @@
+__pycache__/
+*.pyc
+.venv/
+.DS_Store
+data/
+outputs/
+*.png
+*.pkl
+dataset/
+*.idx
+*.gz
+*.npy
+deep-learning-from-scratch/
+.vscode/

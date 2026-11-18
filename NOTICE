@@ -1,0 +1,14 @@
+本仓库的出处与许可说明
+====================
+
+1. 题目、说明与部分实现为原创；但以下实现**参考/改编**自官方配套仓库
+   oreilly-japan/deep-learning-from-scratch（MIT License）：
+   - ch05 的 MulLayer / AddLayer / Relu / Sigmoid / Affine / SoftmaxWithLoss 的接口与基本结构
+   - ch07 的 im2col / col2im / Convolution / Pooling 的基本结构
+   - 原书例题（苹果、im2col、SimpleConvNet 等）的设定
+
+2. 原书《深度学习入门：基于Python的理论与实现》（斋藤康毅）的文字、插图、
+   官方代码版权归原作者与出版社所有；本仓库**不包含**原书正文或官方仓库源码副本。
+
+3. 若你二次分发，请保留本 NOTICE 与 LICENSE，并自行核对官方仓库的许可证文本：
+   https://github.com/oreilly-japan/deep-learning-from-scratch
