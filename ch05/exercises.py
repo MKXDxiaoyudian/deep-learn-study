@@ -1,14 +1,4 @@
-"""第 5 章 误差反向传播法 —— 练习骨架
-
-对应原书
-- §5.3 反向传播（印刷 p130–134）：加法/乘法节点、苹果例子
-- §5.4 简单层的实现（p135–138）：乘法层、加法层
-- §5.5 激活函数层的实现（p139–143）：ReLU、Sigmoid
-- §5.6 Affine/Softmax 层的实现（p144–153）
-- §5.7 误差反向传播法的实现（p154–160）：2 层网络
-
-运行 `python exercises.py` 全过即完成。提示见 ch05/README.md。
-"""
+"""第 5 章 误差反向传播法 —— 参考答案。运行：python answers.py"""
 import os
 import sys
 
@@ -19,68 +9,76 @@ sys.path.insert(0, os.path.dirname(HERE))
 
 
 class MulLayer:
-    """乘法层（§5.4）：实现 forward / backward。"""
     def forward(self, x, y):
-        raise NotImplementedError("TODO: MulLayer.forward")
+        self.x, self.y = x, y
+        return x * y
 
     def backward(self, dout):
-        raise NotImplementedError("TODO: MulLayer.backward")
+        return dout * self.y, dout * self.x  # dout*y -> x 的梯度；dout*x -> y 的梯度
 
 
 class AddLayer:
-    """加法层（§5.4）：实现 forward / backward。"""
     def forward(self, x, y):
-        raise NotImplementedError("TODO: AddLayer.forward")
+        return x + y
 
     def backward(self, dout):
-        raise NotImplementedError("TODO: AddLayer.backward")
+        return dout, dout
 
 
 class Relu:
-    """ReLU 层（§5.5）：实现 forward / backward。"""
     def forward(self, x):
-        raise NotImplementedError("TODO: Relu.forward")
+        self.mask = np.asarray(x) <= 0
+        out = np.asarray(x).copy()
+        out[self.mask] = 0
+        return out
 
     def backward(self, dout):
-        raise NotImplementedError("TODO: Relu.backward")
+        dout = np.asarray(dout).copy()
+        dout[self.mask] = 0
+        return dout
 
 
 class Sigmoid:
-    """Sigmoid 层（§5.5）：实现 forward / backward。"""
     def forward(self, x):
-        raise NotImplementedError("TODO: Sigmoid.forward")
+        self.y = 1.0 / (1.0 + np.exp(-np.asarray(x)))
+        return self.y
 
     def backward(self, dout):
-        raise NotImplementedError("TODO: Sigmoid.backward")
+        return dout * (1.0 - self.y) * self.y
 
 
 class Affine:
-    """Affine 层（§5.6，2D 版）：实现 forward / backward（反向公式见 §5.6.1）。"""
     def __init__(self, W, b):
         self.W, self.b = W, b
         self.x = self.dW = self.db = None
 
     def forward(self, x):
-        raise NotImplementedError("TODO: Affine.forward")
+        self.x = np.asarray(x)
+        return self.x @ self.W + self.b
 
     def backward(self, dout):
-        raise NotImplementedError("TODO: Affine.backward")
+        dX = dout @ self.W.T
+        self.dW = self.x.T @ dout
+        self.db = np.sum(dout, axis=0)
+        return dX, self.dW, self.db
 
 
 class SoftmaxWithLoss:
-    """Softmax + 交叉熵（§5.6）：forward 返回标量 loss，backward 见 §5.6.3。"""
     def forward(self, x, t):
-        raise NotImplementedError("TODO: SoftmaxWithLoss.forward")
+        x = np.asarray(x, dtype=np.float64)
+        self.t = np.asarray(t, dtype=np.float64)
+        c = np.max(x, axis=1, keepdims=True)
+        exp_x = np.exp(x - c)
+        self.y = exp_x / np.sum(exp_x, axis=1, keepdims=True)
+        batch = x.shape[0]
+        self.loss = float(-np.sum(self.t * np.log(self.y + 1e-7)) / batch)
+        return self.loss
 
     def backward(self, dout=1):
-        raise NotImplementedError("TODO: SoftmaxWithLoss.backward")
+        return (self.y - self.t) / self.t.shape[0]
 
 
 class TwoLayerNet:
-    """2 层网络（§5.7，layers 版）：Affine-ReLU-Affine-SoftmaxWithLoss。
-
-    参数：params = {"W1","b1","W2","b2"}；输入 (N,2)，隐藏层 8，输出 2 类。
-    """
     def __init__(self, input_size=2, hidden_size=8, output_size=2, weight_init_std=0.01, seed=0):
         rng = np.random.default_rng(seed)
         self.params = {
@@ -89,24 +87,44 @@ class TwoLayerNet:
             "W2": rng.normal(0, weight_init_std, (hidden_size, output_size)),
             "b2": np.zeros(output_size),
         }
-        self.layers = {}  # TODO: 在 __init__ 里按需创建层（可在 predict/gradient 里懒创建）
+        self.layers = {}
+
+    def _forward(self, x):
+        p = self.params
+        self.layers.update({"a1": Affine(p["W1"], p["b1"]), "r1": Relu(),
+                            "a2": Affine(p["W2"], p["b2"])})
+        a = self.layers["a1"].forward(x)
+        r = self.layers["r1"].forward(a)
+        return self.layers["a2"].forward(r)
 
     def predict(self, x):
-        raise NotImplementedError("TODO: TwoLayerNet.predict")
+        return self._forward(np.asarray(x))
 
     def loss(self, x, t):
-        raise NotImplementedError("TODO: TwoLayerNet.loss")
+        z = self._forward(x)
+        self.layers["last"] = SoftmaxWithLoss()
+        return self.layers["last"].forward(z, t)
 
     def accuracy(self, x, t):
-        raise NotImplementedError("TODO: TwoLayerNet.accuracy")
+        y = self.predict(x).argmax(axis=1)
+        t = np.asarray(t)
+        tt = t.argmax(axis=1) if t.ndim > 1 else t
+        return float((y == tt).mean())
 
     def gradient(self, x, t):
-        """返回与 params 同结构的梯度 dict（反向传播实现）。"""
-        raise NotImplementedError("TODO: TwoLayerNet.gradient")
+        # forward + loss（复用 _forward 里缓存的层）
+        self.loss(x, t)
+        d = self.layers["last"].backward()
+        d = self.layers["a2"].backward(d)[0]   # 只取 dX
+        d = self.layers["r1"].backward(d)
+        _, dW1, db1 = self.layers["a1"].backward(d)
+        return {
+            "W1": dW1, "b1": db1,
+            "W2": self.layers["a2"].dW, "b2": self.layers["a2"].db,
+        }
 
 
 def numerical_gradient(f, x):
-    """复用 ch04 的数值梯度（这里给出，作为核对工具；不算本章 TODO）。"""
     x = np.array(x, dtype=np.float64)
     grad = np.zeros_like(x)
     h = 1e-4
